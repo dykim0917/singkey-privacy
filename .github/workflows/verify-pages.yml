@@ -1,0 +1,22 @@
+name: Verify public iOS pages
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check public pages without login
+        shell: python
+        run: |
+          import urllib.request
+          base = "https://dykim0917.github.io/singkey-privacy/ios/"
+          for path in ("privacy.html", "support.html", "en/privacy.html", "en/support.html", "ja/privacy.html", "ja/support.html"):
+              with urllib.request.urlopen(base + path, timeout=20) as response:
+                  content = response.read().decode("utf-8")
+                  assert response.status == 200
+                  assert "getbathtime@gmail.com" in content
+                  assert "GitHub Pages" in content
+                  print(path, response.status, "OK")
