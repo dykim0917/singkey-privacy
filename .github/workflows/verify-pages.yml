@@ -18,5 +18,8 @@ jobs:
                   content = response.read().decode("utf-8")
                   assert response.status == 200
                   assert "getbathtime@gmail.com" in content
-                  assert "GitHub Pages" in content
+                  assert "Naekiro" in content or "내키로" in content
+                  if path.endswith("privacy.html"):
+                      assert "GitHub Pages" in content
+                      assert "PostHog" in content
                   print(path, response.status, "OK")
