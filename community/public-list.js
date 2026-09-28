@@ -1,0 +1,18 @@
+'use strict';
+const lang=navigator.language.startsWith('ko')?'ko':navigator.language.startsWith('ja')?'ja':'en';
+const strings={ko:{title:'공유 플레이리스트',loading:'목록을 불러오고 있어요.',unavailable:'공개가 중단되었거나 존재하지 않는 목록입니다.',error:'목록을 불러오지 못했어요. 잠시 후 다시 시도해주세요.',missing:'내키로에서 공유받은 목록 링크를 열어주세요.',key:'공유 키',open:'앱에서 열기',original:'YouTube 원본 보기',by:'작성자',songs:'곡',retry:'다시 시도',account:'계정·게시물 삭제 안내',report:'목록 신고·문의',help:'앱이 없으면 원본 영상 링크로 볼 수 있습니다. 재생 가능 여부는 YouTube와 영상 공개 상태에 따라 달라집니다.'},en:{title:'Shared playlist',loading:'Loading playlist…',unavailable:'This playlist is unavailable or has been unpublished.',error:'Could not load this playlist. Please try again.',missing:'Open a playlist link shared from Naekiro.',key:'Shared key',open:'Open in app',original:'Watch original on YouTube',by:'By',songs:'songs',retry:'Retry',account:'Delete account or posts',report:'Report or contact',help:'Without the app, use the original video links. Availability depends on YouTube and each video.'},ja:{title:'共有プレイリスト',loading:'読み込み中…',unavailable:'公開が中止されたか、存在しないリストです。',error:'読み込めませんでした。もう一度お試しください。',missing:'内キロから共有されたリストのリンクを開いてください。',key:'共有キー',open:'アプリで開く',original:'YouTubeの元動画を見る',by:'投稿者',songs:'曲',retry:'再試行',account:'アカウント・投稿の削除',report:'報告・お問い合わせ',help:'アプリがない場合は元動画のリンクから視聴できます。再生できるかはYouTubeと動画の公開状況によります。'}}[lang];
+document.documentElement.lang=lang;
+const el=id=>document.getElementById(id);
+for(const id of ['title','retry','account','report','help'])el(id).textContent=strings[id];
+const id=new URL(location.href).searchParams.get('list'),cfg=window.NAEKIRO_COMMUNITY||{};
+function text(tag,value,parent){const n=document.createElement(tag);n.textContent=value;parent.append(n);return n;}
+async function load(){el('songs').replaceChildren();el('app').hidden=true;el('retry').style.display='none';el('status').textContent=strings.loading;
+ if(!id||!/^([a-f0-9]{8}-){1}[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(id)){el('status').textContent=strings.missing;return;}
+ try{const endpoint=new URL(cfg.url);if(endpoint.protocol!=='https:'||!endpoint.hostname.endsWith('.supabase.co')||!String(cfg.key).startsWith('sb_publishable_'))throw Error('configuration');
+  const response=await fetch(endpoint.origin+'/rest/v1/rpc/community_feed',{method:'POST',headers:{apikey:cfg.key,'Content-Type':'application/json'},body:JSON.stringify({p_id:id}),signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error('request');const data=await response.json();if(!Array.isArray(data)||data.length===0){el('status').textContent=strings.unavailable;return;}const list=data[0];
+  if(list.id!==id||typeof list.title!=='string'||typeof list.nickname!=='string'||!Array.isArray(list.songs)||list.songs.length>50)throw Error('invalid');
+  el('title').textContent=list.title;el('status').textContent=`${strings.by} ${list.nickname} · ${list.songs.length} ${strings.songs}`;
+  for(const song of list.songs){if(!/^[A-Za-z0-9_-]{11}$/.test(song.video_id)||typeof song.title!=='string')throw Error('invalid');const row=document.createElement('article');text('strong',song.title,row);if(Number.isInteger(song.key)&&Math.abs(song.key)<=12)text('p',strings.key+' '+(song.key>0?'+':'')+song.key,row);const a=text('a',strings.original,row);a.href='https://www.youtube.com/watch?v='+song.video_id;a.rel='noopener noreferrer';el('songs').append(row);}
+  if(/^kr\.keymate\.app(?:\.youtubeprobe)?$/.test(cfg.androidPackage)){el('app').href=cfg.androidPackage+'.lists://playlist/'+id;el('app').textContent=strings.open;el('app').hidden=false;}
+ }catch{el('songs').replaceChildren();el('status').textContent=strings.error;el('retry').style.display='inline-block';}}
+el('retry').addEventListener('click',load);load();
